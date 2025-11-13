@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Línea de Tiempo Interactiva del TDAH</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+
+        .era-selector {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .era-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .era-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .era-btn.active {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .era-clasica { background: linear-gradient(135deg, #ff6b9d, #c44569); }
+        .era-temprana { background: linear-gradient(135deg, #4834d4, #686de0); }
+        .era-moderna { background: linear-gradient(135deg, #00d2d3, #54a0ff); }
+        .era-dsm { background: linear-gradient(135deg, #5f27cd, #a55eea); }
+        .era-contemporanea { background: linear-gradient(135deg, #0abde3, #006ba6); }
+
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, #ff6b9d, #4834d4, #00d2d3, #5f27cd, #0abde3);
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin: 40px 0;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .timeline-item.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .timeline-item:nth-child(odd) .content {
+            margin-left: 0;
+            margin-right: 55%;
+            text-align: right;
+        }
+
+        .timeline-item:nth-child(even) .content {
+            margin-left: 55%;
+            margin-right: 0;
+            text-align: left;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: 50%;
+            top: 20px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            border: 4px solid white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .timeline-marker:hover {
+            transform: translateX(-50%) scale(1.5);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .content {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 5px solid;
+        }
+
+        .content:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+
+        .year {
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2d3748;
+        }
+
+        .description {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .impact {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            margin-top: 15px;
+            font-style: italic;
+            color: #4c51bf;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 20px;
+            top: 15px;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(to right, #ff6b9d, #4834d4, #00d2d3, #5f27cd, #0abde3);
+            z-index: 1000;
+            transition: width 0.3s ease;
+        }
+
+        .floating-info {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .floating-info:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .timeline::before {
+                left: 30px;
+            }
+
+            .timeline-item:nth-child(odd) .content,
+            .timeline-item:nth-child(even) .content {
+                margin-left: 70px;
+                margin-right: 0;
+                text-align: left;
+            }
+
+            .timeline-marker {
+                left: 30px;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .search-container {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .search-input {
+            padding: 12px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            width: 300px;
+            max-width: 100%;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    
+    <div class="container">
+        <h1>Historia del TDAH</h1>
+        <p class="subtitle">Una línea de tiempo interactiva del Trastorno por Déficit de Atención e Hiperactividad</p>
+        
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="Buscar en la línea de tiempo...">
+        </div>
+
+        <div class="era-selector">
+            <button class="era-btn era-clasica active" data-era="all">Todas las Eras</button>
+            <button class="era-btn era-clasica" data-era="clasica">Era Clásica (1798-1900)</button>
+            <button class="era-btn era-temprana" data-era="temprana">Siglo XX Temprano (1900-1950)</button>
+            <button class="era-btn era-moderna" data-era="moderna">Era Moderna (1950-1980)</button>
+            <button class="era-btn era-dsm" data-era="dsm">Era DSM (1980-2000)</button>
+            <button class="era-btn era-contemporanea" data-era="contemporanea">Era Contemporánea (2000+)</button>
+        </div>
+
+        <div class="timeline" id="timeline">
+            <!-- Los elementos se generarán dinámicamente -->
+        </div>
+    </div>
+
+    <div class="floating-info" onclick="showInfo()">
+        ℹ️ Información
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        const timelineData = [
+            {
+                year: "1798",
+                era: "clasica",
+                title: "Primera Descripción Médica",
+                description: "Sir Alexander Crichton describe por primera vez síntomas similares al TDAH en su libro 'An inquiry into the nature and origin of mental derangement'.",
+                impact: "Establece las bases para el reconocimiento médico de los problemas de atención.",
+                color: "#ff6b9d",
+                details: "Crichton observó que algunos niños tenían dificultades para mantener la atención en tareas que requerían esfuerzo mental continuo. Describió esto como una 'inquietud mental' que impedía el aprendizaje normal."
+            },
+            {
+                year: "1845",
+                era: "clasica",
+                title: "Heinrich Hoffmann y 'Struwwelpeter'",
+                description: "El médico alemán publica cuentos infantiles que incluyen 'Fidgety Philip', describiendo comportamientos hiperactivos.",
+                impact: "Primera representación cultural popular de síntomas de hiperactividad.",
+                color: "#ff6b9d",
+                details: "Los cuentos de Hoffmann mostraban niños con comportamientos disruptivos y falta de autocontrol, proporcionando una de las primeras descripciones literarias de lo que ahora conocemos como TDAH."
+            },
+            {
+                year: "1902",
+                era: "temprana",
+                title: "George Still - Defecto del Control Moral",
+                description: "Still presenta casos de niños con problemas de atención y comportamiento, atribuyéndolos a un 'defecto del control moral'.",
+                impact: "Primera descripción médica sistemática de síntomas de TDAH en niños.",
+                color: "#4834d4",
+                details: "Still describió 43 casos de niños que mostraban agresividad, desafío, problemas de atención y hiperactividad. Propuso que estos comportamientos tenían una base biológica más que moral."
+            },
+            {
+                year: "1918-1930",
+                era: "temprana",
+                title: "Encefalitis Letárgica",
+                description: "Epidemia de encefalitis deja secuelas neurológicas en niños, incluyendo hiperactividad y problemas de atención.",
+                impact: "Establece la conexión entre daño cerebral y síntomas de TDAH.",
+                color: "#686de0",
+                details: "Los supervivientes de la encefalitis letárgica mostraron síntomas similares al TDAH, lo que llevó a los médicos a considerar las causas neurológicas de estos comportamientos."
+            },
+            {
+                year: "1937",
+                era: "temprana",
+                title: "Charles Bradley - Primeros Estimulantes",
+                description: "Bradley descubre accidentalmente que los estimulantes mejoran el comportamiento y la atención en niños.",
+                impact: "Inicio del tratamiento farmacológico para síntomas de TDAH.",
+                color: "#4834d4",
+                details: "Bradley administró benzedrina a niños con problemas de comportamiento y observó mejoras dramáticas en su capacidad de atención y rendimiento académico, estableciendo las bases del tratamiento con estimulantes."
+            },
+            {
+                year: "1957",
+                era: "moderna",
+                title: "Síndrome del Niño Hipercinético",
+                description: "Se acuña el término 'síndrome del niño hipercinético' para describir niños con exceso de actividad motora.",
+                impact: "Primera terminología médica específica para describir la hiperactividad.",
+                color: "#00d2d3",
+                details: "Este término se centró principalmente en los síntomas de hiperactividad e impulsividad, sin considerar adecuadamente los problemas de atención que también estaban presentes."
+            },
+            {
+                year: "1968",
+                era: "moderna",
+                title: "DSM-II - Reacción Hipercinética",
+                description: "El DSM-II incluye por primera vez la 'reacción hipercinética de la infancia' como diagnóstico oficial.",
+                impact: "Primer reconocimiento oficial del trastorno en el manual diagnóstico.",
+                color: "#54a0ff",
+                details: "Esta inclusión marcó el reconocimiento formal del trastorno por la comunidad psiquiátrica, aunque la descripción se centraba principalmente en la hiperactividad."
+            },
+            {
+                year: "1970s",
+                era: "moderna",
+                title: "Investigación de Virginia Douglas",
+                description: "Douglas demuestra que el problema principal no es la hiperactividad, sino la dificultad para mantener la atención.",
+                impact: "Cambio de paradigma: de hiperactividad a déficit de atención.",
+                color: "#00d2d3",
+                details: "Los estudios de Douglas mostraron que los problemas de atención persistían incluso cuando la hiperactividad disminuía, lo que llevó a reconceptualizar el trastorno."
+            },
+            {
+                year: "1980",
+                era: "dsm",
+                title: "DSM-III - Trastorno por Déficit de Atención",
+                description: "Se introduce el término 'Trastorno por Déficit de Atención' (TDA) con y sin hiperactividad.",
+                impact: "Reconocimiento oficial de los problemas de atención como síntoma principal.",
+                color: "#5f27cd",
+                details: "Esta revisión reconoció que algunos individuos tenían problemas de atención sin hiperactividad significativa, creando dos subtipos del trastorno."
+            },
+            {
+                year: "1987",
+                era: "dsm",
+                title: "DSM-III-R - TDAH",
+                description: "Se cambia el nombre a 'Trastorno por Déficit de Atención con Hiperactividad' (TDAH).",
+                impact: "Unificación del diagnóstico bajo el término TDAH que usamos hoy.",
+                color: "#a55eea",
+                details: "Esta revisión eliminó la distinción entre TDA con y sin hiperactividad, creando una sola categoría diagnóstica con criterios más específicos."
+            },
+            {
+                year: "1994",
+                era: "dsm",
+                title: "DSM-IV - Tres Subtipos",
+                description: "Se establecen tres subtipos: predominantemente inatento, hiperactivo-impulsivo, y combinado.",
+                impact: "Clasificación más precisa que reconoce la heterogeneidad del trastorno.",
+                color: "#5f27cd",
+                details: "Esta clasificación permitió un diagnóstico más preciso al reconocer que el TDAH se presenta de diferentes formas en diferentes individuos."
+            },
+            {
+                year: "1996",
+                era: "dsm",
+                title: "Consenso de la NIH",
+                description: "La Conferencia de Consenso de los Institutos Nacionales de Salud valida el TDAH como trastorno médico legítimo.",
+                impact: "Validación científica oficial del TDAH como condición médica real.",
+                color: "#a55eea",
+                details: "Esta conferencia reunió a expertos de todo el mundo para revisar la evidencia científica y establecer que el TDAH es un trastorno neurobiológico válido."
+            },
+            {
+                year: "2000s",
+                era: "contemporanea",
+                title: "Neuroimagen y Genética",
+                description: "Avances en neuroimagen revelan diferencias estructurales y funcionales en cerebros con TDAH.",
+                impact: "Evidencia neurobiológica sólida del TDAH como trastorno del neurodesarrollo.",
+                color: "#0abde3",
+                details: "Los estudios de neuroimagen mostraron diferencias en el tamaño y actividad de regiones cerebrales relacionadas con la atención y el control ejecutivo."
+            },
+            {
+                year: "2013",
+                era: "contemporanea",
+                title: "DSM-5 - Actualización de Criterios",
+                description: "Se actualizan los criterios diagnósticos, se reconoce el TDAH en adultos y se cambian los subtipos a 'presentaciones'.",
+                impact: "Reconocimiento del TDAH como trastorno que persiste en la adultez.",
+                color: "#006ba6",
+                details: "El DSM-5 aumentó la edad de inicio de síntomas a 12 años, reconoció oficialmente el TDAH en adultos y cambió la terminología de 'subtipos' a 'presentaciones'."
+            },
+            {
+                year: "2020+",
+                era: "contemporanea",
+                title: "Era de la Medicina Personalizada",
+                description: "Desarrollo de tratamientos personalizados basados en perfiles genéticos y neurobiológicos individuales.",
+                impact: "Hacia un tratamiento más preciso y efectivo del TDAH.",
+                color: "#0abde3",
+                details: "La investigación actual se centra en identificar biomarcadores que permitan tratamientos más específicos y efectivos para cada individuo con TDAH."
+            }
+        ];
+
+        let currentFilter = 'all';
+        let currentData = timelineData;
+
+        function initTimeline() {
+            renderTimeline(currentData);
+            setupEventListeners();
+            updateProgressBar();
+        }
+
+        function renderTimeline(data) {
+            const timeline = document.getElementById('timeline');
+            timeline.innerHTML = '';
+
+            data.forEach((item, index) => {
+                const timelineItem = document.createElement('div');
+                timelineItem.className = 'timeline-item';
+                timelineItem.dataset.era = item.era;
+                
+                timelineItem.innerHTML = `
+                    <div class="timeline-marker" style="background-color: ${item.color}" 
+                         onmouseover="showTooltip(event, '${item.year}')" 
+                         onmouseout="hideTooltip()"
+                         onclick="showDetails('${index}')"></div>
+                    <div class="content" style="border-left-color: ${item.color}" onclick="showDetails('${index}')">
+                        <div class="year">${item.year}</div>
+                        <div class="title">${item.title}</div>
+                        <div class="description">${item.description}</div>
+                        <div class="impact">${item.impact}</div>
+                    </div>
+                `;
+
+                timeline.appendChild(timelineItem);
+
+                // Animación de entrada
+                setTimeout(() => {
+                    timelineItem.classList.add('visible');
+                }, index * 100);
+            });
+        }
+
+        function setupEventListeners() {
+            // Filtros de era
+            document.querySelectorAll('.era-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.era-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    const era = e.target.dataset.era;
+                    currentFilter = era;
+                    
+                    if (era === 'all') {
+                        currentData = timelineData;
+                    } else {
+                        currentData = timelineData.filter(item => item.era === era);
+                    }
+                    
+                    renderTimeline(currentData);
+                });
+            });
+
+            // Búsqueda
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    currentData = currentFilter === 'all' ? timelineData : timelineData.filter(item => item.era === currentFilter);
+                } else {
+                    const baseData = currentFilter === 'all' ? timelineData : timelineData.filter(item => item.era === currentFilter);
+                    currentData = baseData.filter(item => 
+                        item.title.toLowerCase().includes(searchTerm) ||
+                        item.description.toLowerCase().includes(searchTerm) ||
+                        item.year.includes(searchTerm)
+                    );
+                }
+                
+                renderTimeline(currentData);
+            });
+
+            // Scroll para barra de progreso
+            window.addEventListener('scroll', updateProgressBar);
+        }
+
+        function showDetails(index) {
+            const item = currentData[index];
+            const modal = document.getElementById('modal');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalBody.innerHTML = `
+                <h2 style="color: ${item.color}; margin-bottom: 20px;">${item.year} - ${item.title}</h2>
+                <div style="background: linear-gradient(135deg, ${item.color}20, ${item.color}10); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3>Descripción</h3>
+                    <p>${item.description}</p>
+                </div>
+                <div style="background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3>Impacto Histórico</h3>
+                    <p>${item.impact}</p>
+                </div>
+                <div style="background: rgba(118, 75, 162, 0.1); padding: 20px; border-radius: 10px;">
+                    <h3>Detalles Adicionales</h3>
+                    <p>${item.details}</p>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function showInfo() {
+            const modal = document.getElementById('modal');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalBody.innerHTML = `
+                <h2 style="color: #667eea; margin-bottom: 20px;">Acerca de esta Línea de Tiempo</h2>
+                <div style="background: linear-gradient(135deg, #667eea20, #764ba210); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3>Cómo usar esta línea de tiempo</h3>
+                    <ul style="margin-left: 20px; line-height: 1.8;">
+                        <li>Haz clic en los botones de era para filtrar por período histórico</li>
+                        <li>Usa la barra de búsqueda para encontrar eventos específicos</li>
+                        <li>Haz clic en cualquier evento para ver detalles completos</li>
+                        <li>Pasa el cursor sobre los marcadores para ver el año</li>
+                    </ul>
+                </div>
+                <div style="background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3>Colores de las Eras</h3>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 20px; height: 20px; background: linear-gradient(135deg, #ff6b9d, #c44569); border-radius: 50%;"></div>
+                            <span>Era Clásica (1798-1900)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 20px; height: 20px; background: linear-gradient(135deg, #4834d4, #686de0); border-radius: 50%;"></div>
+                            <span>Siglo XX Temprano (1900-1950)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 20px; height: 20px; background: linear-gradient(135deg, #00d2d3, #54a0ff); border-radius: 50%;"></div>
+                            <span>Era Moderna (1950-1980)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 20px; height: 20px; background: linear-gradient(135deg, #5f27cd, #a55eea); border-radius: 50%;"></div>
+                            <span>Era DSM (1980-2000)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 20px; height: 20px; background: linear-gradient(135deg, #0abde3, #006ba6); border-radius: 50%;"></div>
+                            <span>Era Contemporánea (2000+)</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="background: rgba(118, 75, 162, 0.1); padding: 20px; border-radius: 10px;">
+                    <h3>Sobre el TDAH</h3>
+                    <p>El Trastorno por Déficit de Atención e Hiperactividad (TDAH) es un trastorno del neurodesarrollo que afecta a millones de personas en todo el mundo. Esta línea de tiempo muestra cómo nuestra comprensión de este trastorno ha evolucionado a lo largo de más de 200 años de investigación médica y científica.</p>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+
+        function showTooltip(event, text) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.textContent = text;
+            tooltip.style.left = event.pageX + 10 + 'px';
+            tooltip.style.top = event.pageY - 30 + 'px';
+            tooltip.style.opacity = '1';
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').style.opacity = '0';
+        }
+
+        function updateProgressBar() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const progress = (scrollTop / scrollHeight) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Inicializar cuando se carga la página
+        document.addEventListener('DOMContentLoaded', initTimeline);
+    </script>
+</body>
+</html> 
