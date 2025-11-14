@@ -5,6 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Línea de Tiempo Interactiva del TDAH</title>
     <style>
+		/* ====== MODO OSCURO ====== */
+		body.dark-mode {
+			background-color: #111 !important;
+			color: #f1f1f1 !important;
+		}
+
+		body.dark-mode .container {
+			background: rgba(0,0,0,0.6) !important;
+			color: #f1f1f1 !important;
+		}
+
+		body.dark-mode h1,
+		body.dark-mode h2,
+		body.dark-mode p {
+			color: #f1f1f1 !important;
+		}
+
+		body.dark-mode .content {
+			background: #222 !important;
+			color: #f1f1f1 !important;
+		}
+
+		body.dark-mode .impact {
+			background: rgba(100,120,255,0.2) !important;
+		}
+
+		body.dark-mode .modal-content {
+			background: #222 !important;
+			color: #fff !important;
+		}
+
+		body.dark-mode .close {
+			color: #fff !important;
+		}
+
+		/* Botón modo oscuro */
+		.darkmode-btn {
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			z-index: 9999;
+			background: #333;
+			color: white;
+			padding: 12px 18px;
+			border: none;
+			border-radius: 25px;
+			cursor: pointer;
+			font-weight: 600;
+		}
         * {
             margin: 0;
             padding: 0;
@@ -323,6 +372,7 @@
     </style>
 </head>
 <body>
+<button id="darkModeToggle" class="darkmode-btn">🌙 Modo Oscuro</button>
     <div class="progress-bar" id="progressBar"></div>
     
     <div class="container">
@@ -687,6 +737,18 @@
 
         // Inicializar cuando se carga la página
         document.addEventListener('DOMContentLoaded', initTimeline);
+		// ACTIVAR MODO OSCURO
+document.getElementById("darkModeToggle").addEventListener("click", () => {
+    document.body.classList.toggle("dark-mode");
+
+    const btn = document.getElementById("darkModeToggle");
+
+    if (document.body.classList.contains("dark-mode")) {
+        btn.textContent = "☀️ Modo Claro";
+    } else {
+        btn.textContent = "🌙 Modo Oscuro";
+    }
+});
     </script>
 </body>
 </html> 
